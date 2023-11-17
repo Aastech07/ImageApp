@@ -1,0 +1,91 @@
+import React, { useState, useEffect, useRef } from 'react';
+import { View, FlatList, Image, StyleSheet, Dimensions, TouchableOpacity, TouchableWithoutFeedback, } from 'react-native';
+import * as FileSystem from 'expo-file-system';
+import * as MediaLibrary from 'expo-media-library';
+
+const Photos = () => {
+    const { width, height } = Dimensions.get('screen');
+    const [data, setData] = useState([]);
+
+
+
+
+    useEffect(() => {
+        const fetchData = async () => {
+            try {
+                const response = await fetch(
+                    'https://api.unsplash.com/photos/?client_id=V4DbfvefLLULRV4wsl_3gkumCrujX0hrSCXV9yHrI5U'
+                );
+                const result = await response.json();
+                setData(result);
+            } catch (error) {
+                console.error('Error fetching images:', error);
+            }
+        };
+
+        fetchData();
+    }, []);
+
+    const PhotosData = async () => {
+        const filename = "image.jpg";
+        const fileUri = FileSystem.documentDirectory + filename;
+
+        try {
+            const result = await FileSystem.downloadAsync(
+
+                'https://s3.us-west-2.amazonaws.com/images.unsplash.com/small/photo-1699190375905-3cac33bbdbb1',
+                fileUri
+            );
+
+            // Save image to the gallery
+            if (result.status === 200) {
+                await MediaLibrary.saveToLibraryAsync(fileUri);
+                console.log('Image saved to gallery');
+            } else {
+                console.log('Failed to download image');
+            }
+        } catch (error) {
+            console.error('Error downloading image:', error);
+        }
+    };
+
+  const [Imageid,setImageID] =useState([])  
+    const ClickImage = () => {
+        console.log('Clicke Image done!')
+        console.log(Imageid.urls)
+    }
+   setTimeout(() => {
+    ClickImage()
+   }, 500);
+
+    return (
+        <View style={{ flex: 1, backgroundColor: '#0000' }}>
+            <FlatList
+                data={data}
+                keyExtractor={(item) => item.id}
+                horizontal
+                pagingEnabled
+                renderItem={({ item }) => (
+                    
+                    <View style={{ width, height }}>
+                    <TouchableWithoutFeedback onPress={()=>setImageID(item)}>
+                         <Image source={{ uri: item.urls.regular }} style={[StyleSheet.absoluteFillObject]} />
+                     </TouchableWithoutFeedback>
+                    </View>
+                )}
+            />
+
+            <FlatList
+                style={{ position: 'absolute', top: 620 }}
+                data={data}
+                keyExtractor={(item) => item.id}
+                horizontal
+                renderItem={({ item }) => (
+                    <Image source={{ uri: item.urls.small }} style={{ width: 80, height: 80, margin: 5, borderRadius: 12 }} />
+                )}
+            />
+        </View>
+    );
+};
+
+export default Photos;
