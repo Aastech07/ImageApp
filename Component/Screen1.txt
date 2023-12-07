@@ -1,20 +1,26 @@
+import React from 'react';
+import { View, FlatList, Text } from 'react-native';
 
-import * as React from 'react';
-import { NavigationContainer } from '@react-navigation/native';
-import { createNativeStackNavigator } from '@react-navigation/native-stack';
-import { View ,Text} from 'react-native';
-import photos from './Photos';
+const App = () => {
+  // Generate an array of numbers from 1 to 1000
+  const data = Array.from({ length: 1000 }, (_, index) => index + 1);
 
-const Stack = createNativeStackNavigator();
-
-const Screen1=()=> {
-  return (
-    <NavigationContainer>
-      <Stack.Navigator>
-        <Stack.Screen name="Home" options={{headerShown:false}} component={photos} />
-      </Stack.Navigator>
-    </NavigationContainer>
+  // Render each item in the FlatList
+  const renderItem = ({ item }) => (
+    <View style={{ padding: 10, borderBottomWidth: 1, borderBottomColor: '#ccc' }}>
+      <Text>{item}</Text>
+    </View>
   );
-}
 
-export default Screen1;
+  return (
+    <FlatList
+    horizontal
+    
+      data={data}
+      renderItem={renderItem}
+      keyExtractor={(item) => item.toString()}
+    />
+  );
+};
+
+export default App;

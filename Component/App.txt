@@ -1,0 +1,53 @@
+import React, { useState } from 'react';
+import { View, TouchableOpacity, Text, StyleSheet } from 'react-native';
+import Icon from 'react-native-vector-icons/FontAwesome'; // You can choose any icon library
+
+const DownloadButton = () => {
+  const [isDownloading, setIsDownloading] = useState(false);
+
+  const handleDownload = () => {
+    // Simulate download logic
+    setIsDownloading(true);
+
+    // Simulate download completion after 2 seconds
+    setTimeout(() => {
+      setIsDownloading(false);
+    }, 4000);
+  };
+
+  return (
+    <View style={styles.container}>
+      <TouchableOpacity
+        style={styles.button}
+        onPress={handleDownload}
+        activeOpacity={0.7}
+        disabled={isDownloading}>
+        <Icon name="cloud-download" size={30} color="white" />
+        <Text style={styles.buttonText}>{isDownloading ? 'Downloading...' : 'Download'}</Text>
+      </TouchableOpacity>
+    </View>
+  );
+};
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  button: {
+    flexDirection: 'row',
+    backgroundColor: '#4CAF50',
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderRadius: 5,
+    alignItems: 'center',
+  },
+  buttonText: {
+    color: 'white',
+    marginLeft: 10,
+    fontSize: 18,
+  },
+});
+
+export default DownloadButton;

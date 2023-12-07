@@ -1,79 +1,195 @@
-import React, { useState, useEffect } from 'react';
-import { StyleSheet, View, Text, TouchableOpacity, Image } from 'react-native';
-import { Camera } from 'expo-camera';
+import React, { useState, useEffect, useRef } from 'react';
+import { View, FlatList, Image, StyleSheet, Dimensions, TouchableOpacity, Text } from 'react-native';
+import * as FileSystem from 'expo-file-system';
+import * as MediaLibrary from 'expo-media-library';
+import Icon from 'react-native-vector-icons/FontAwesome';
 
 const CameraScreen = () => {
-  const [hasPermission, setHasPermission] = useState(null);
-  const [cameraRef, setCameraRef] = useState(null);
-  const [photo, setPhoto] = useState(null);
+  const { width, height } = Dimensions.get('screen');
+  const [data, setData] = useState([]);
+  const topRef = useRef();
+  const thumRef = useRef();
+       const ACCESS_KEY = 'V4DbfvefLLULRV4wsl_3gkumCrujX0hrSCXV9yHrI5U';
+      const BASE_URL = 'https://api.unsplash.com/photos/';
+      const PER_PAGE = 60;
+      const searchTerm = 'food';
 
-  useEffect(() => {
-    (async () => {
-      const { status } = await Camera.requestPermissionsAsync();
-      setHasPermission(status === 'granted');
-    })();
-  }, []);
+  const fetchData = () => {
+    try {
+      
 
-  const takePicture = async () => {
-    if (cameraRef) {
-      const photoData = await cameraRef.takePictureAsync({ quality: 1, base64: true });
-      setPhoto(`data:image/jpg;base64,${photoData.base64}`);
-      console.warn(photo)
+      const xhr = new XMLHttpRequest();
+      const url = `${BASE_URL}?query=${searchTerm}&client_id=${ACCESS_KEY}&per_page=${PER_PAGE}&page=${1}`;
+  
+      xhr.open('GET', url, true);
+  
+      xhr.onload = function () {
+        if (xhr.status >= 200 && xhr.status < 300) {
+          const result = JSON.parse(xhr.responseText);
+          setData(result);
+        } else {
+          console.error('Error fetching images:', xhr.statusText);
+        }
+      };
+  
+      xhr.onerror = function () {
+        console.error('Network error while fetching images');
+      };
+  
+      xhr.send();
+    } catch (error) {
+      console.error('Error fetching images:', error);
     }
   };
+  
+  useEffect(() => {
+    fetchData();
+  }, []);
+  
 
-  if (hasPermission === null) {
-    return <View />;
+
+
+  const [selectedImageId, setSelectedImageId] = useState(null);
+ 
+  const PhotosData = async (imageId, imageUrl) => {
+    const filename = "image.jpg";
+    const fileUri = FileSystem.documentDirectory + filename;
+  
+    try {
+      // Request MEDIA_LIBRARY permissions
+      const { status } = await MediaLibrary.requestPermissionsAsync();
+  
+      if (status === 'granted') {
+        const result = await FileSystem.downloadAsync(imageUrl, fileUri);
+  
+        if (result.status === 200) {
+          await MediaLibrary.saveToLibraryAsync(fileUri);
+          console.log('Image saved to gallery');
+        } else {
+          console.log('Failed to download image');
+        }
+      } else {
+        console.log('Permission denied for saving to the library');
+      }
+    } catch (error) {
+      console.error('Error downloading image:', error);
+    }
+  };
+  
+  const IMAGE_SIZE = 80
+  const [indexs, setIndexs] = useState(0)
+  const setActiveIndex = (index) => {
+    setIndexs(index)
+    topRef?.current?.scrollToOffset({
+      offset: index * width,
+      animated: true
+    })
+    if (index * (IMAGE_SIZE + 10) - IMAGE_SIZE / 2 > width / 2) {
+      thumRef?.current?.scrollToOffset({
+        offset: index * (IMAGE_SIZE + 10) - width / 2 + IMAGE_SIZE / 2,
+        animated: true
+      })
+    } else {
+      thumRef?.current?.scrollToOffset({
+        offset: 0,
+        animated: true
+      })
+    }
   }
 
-  if (hasPermission === false) {
-    return <Text>No access to camera</Text>;
+  const [isDownloading, setIsDownloading] = useState(false);
+  const [isDownloading1, setIsDownloading1] = useState(false);
+
+  const Hides = () => {
+    setIsDownloading1(!isDownloading1)
+
+    setTimeout(() => {
+      setIsDownloading1(false)
+
+    }, 3000);
   }
+
+
+  const handleDownload = () => {
+    setIsDownloading(true);
+
+    setTimeout(() => {
+      setIsDownloading(false);
+    }, 3000);
+  };
+
 
   return (
-    <View style={styles.container}>
-      <Camera
-        ref={(ref) => setCameraRef(ref)}
-        style={styles.camera}
-        type={Camera.Constants.Type.back}
+    <View style={{ flex: 1, backgroundColor: '#0000' }}>
+      <FlatList
+        ref={topRef}
+        data={data}
+        keyExtractor={(item) => item.id}
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        pagingEnabled
+        onMomentumScrollEnd={ev => {
+          setActiveIndex(Math.floor(ev.nativeEvent.contentOffset.x / width))
+        }}
+        renderItem={({ item }) => (
+          <View style={{ width, height }}>
+            <Image source={{ uri: item.urls.regular }} style={[StyleSheet.absoluteFillObject]} />
+            <TouchableOpacity
+              style={styles.button}
+              onPress={() => handleDownload() +
+                setSelectedImageId(item.id) +
+                setTimeout(() => {
+                  PhotosData(item.id, item.urls.regular)
+                }, 3000) + Hides()
+              }
+              activeOpacity={0.7}
+              disabled={isDownloading}>
+              <Icon name="cloud-download" size={15} color="white" />
+            </TouchableOpacity>
+            {isDownloading1 ? <Text style={styles.buttonText}>{isDownloading ? 'Downloading...' : 'rgba(0, 0, 0, 0.5)'}</Text> : null}
+          </View>
+        )} />
+
+      <FlatList
+        ref={thumRef}
+        style={{ position: 'absolute', top: 620 }}
+        data={data}
+        showsHorizontalScrollIndicator={false}
+        keyExtractor={(item) => item.id}
+        horizontal
+        renderItem={({ item, index }) => (
+          <TouchableOpacity onPress={() => setActiveIndex(index)}>
+            <Image source={{ uri: item.urls.small }}
+              style={{ width: IMAGE_SIZE, height: IMAGE_SIZE, margin: 5, borderRadius: 12, borderWidth: 1.5, borderColor: indexs === index ? '#fff' : null }} />
+          </TouchableOpacity>
+        )}
       />
-      <View style={styles.buttonContainer}>
-        <TouchableOpacity style={styles.button} onPress={takePicture}>
-          <Text style={styles.buttonText}>Take Photo</Text>
-        </TouchableOpacity>
-      </View>
-      {photo && <Image source={{ uri: photo }} style={styles.previewImage} />}
+
     </View>
   );
 };
 
+export default CameraScreen;
+
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    flexDirection: 'column',
-  },
-  camera: {
-    flex: 1,
-  },
-  buttonContainer: {
-    position: 'absolute',
-    bottom: 20,
-    alignSelf: 'center',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   button: {
-    backgroundColor: 'blue',
-    borderRadius: 5,
-    padding: 15,
+    flexDirection: 'row',
+    backgroundColor: '#4CAF50',
+    paddingHorizontal: 10,
+    paddingVertical: 10,
+    borderRadius: 50,
+    alignItems: 'center',
+    position: 'absolute', top: 40,
+    left: 300,
   },
   buttonText: {
-    color: 'white',
-  },
-  previewImage: {
-    width: 200,
-    height: 200,
-    marginTop: 20,
-    alignSelf: 'center',
+    color: '#4CAF50',
+    position: 'absolute',
+    fontSize: 14, left: 270, top: 80
   },
 });
-
-export default CameraScreen;
